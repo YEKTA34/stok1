@@ -2,15 +2,13 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="FLO Stok Dashboard", layout="wide")
+st.set_page_config(page_title="Stok Dashboard", layout="wide")
 
-# ---------------- Kullanıcı Bilgileri ----------------
 USERS = {
     "admin": {"password": "1234", "role": "admin"},
-    "kullanici": {"password": "1234", "role": "kullanici"}  # Viewer artık "kullanici"
+    "kullanici": {"password": "1234", "role": "kullanici"}
 }
 
-# ---------------- Session State ----------------
 if 'login_status' not in st.session_state:
     st.session_state.login_status = False
 if 'user_role' not in st.session_state:
@@ -18,32 +16,9 @@ if 'user_role' not in st.session_state:
 if 'username' not in st.session_state:
     st.session_state.username = None
 
-# ---------------- CSS ile logo, animasyon, gradient ve buton hover ----------------
 st.markdown("""
-    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
     <style>
     body { background-color: black; }
-    .flo-logo {
-        font-family: 'Anton', sans-serif;
-        font-size: 120px;
-        text-align: center;
-        background: linear-gradient(270deg, #FF6600, #FFAA33, #FF6600);
-        background-size: 600% 600%;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: gradientMove 4s ease infinite, pulse 2s infinite;
-        margin-bottom: 20px;
-    }
-    @keyframes pulse {
-        0% {transform: scale(1);}
-        50% {transform: scale(1.05);}
-        100% {transform: scale(1);}
-    }
-    @keyframes gradientMove {
-        0% {background-position: 0% 50%;}
-        50% {background-position: 100% 50%;}
-        100% {background-position: 0% 50%;}
-    }
     .login-container { text-align: center; margin-top: 20px; }
     .stButton>button {
         background-color: #FF6600; color: black; font-weight: bold;
@@ -54,9 +29,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ---------------- Giriş Ekranı ----------------
 def login_screen():
-    st.markdown('<div class="flo-logo">FLO</div>', unsafe_allow_html=True)
     st.markdown('<div class="login-container">', unsafe_allow_html=True)
     username = st.text_input("Kullanıcı Adı")
     password = st.text_input("Şifre", type="password")
@@ -70,19 +43,14 @@ def login_screen():
             st.error("Kullanıcı adı veya şifre yanlış!")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- Dashboard ----------------
 def dashboard():
-    # Dashboard üstünde logo hep görünür
-    st.markdown('<div class="flo-logo">FLO</div>', unsafe_allow_html=True)
-    
     st.sidebar.success(f"Giriş yapıldı: {st.session_state.username} ({st.session_state.user_role})")
     if st.sidebar.button("Çıkış Yap"):
         st.session_state.login_status = False
         st.experimental_rerun()
 
-    st.title("📦 FLO Stok Takip Dashboard")
+    st.title("📦 Stok Takip Dashboard")
 
-    # ---------------- Session State ile veri saklama ----------------
     if 'df' not in st.session_state:
         data = {
             "Ürün": ["Spor Ayakkabı", "Çanta", "Tişört", "Bot", "Cüzdan"],
@@ -100,7 +68,6 @@ def dashboard():
             "Cüzdan": [10,9,11,10,12]
         }
 
-    # ---------------- Sidebar Filtre ----------------
     st.sidebar.subheader("Filtreleme")
     kategori_sec = st.sidebar.multiselect(
         "Kategori Seç", 
@@ -108,7 +75,6 @@ def dashboard():
         default=st.session_state.df["Kategori"].unique()
     )
 
-    # ---------------- Yeni Ürün Ekleme (Sadece Admin) ----------------
     if st.session_state.user_role == "admin":
         st.sidebar.subheader("Yeni Ürün Ekle")
         yeni_urun = st.sidebar.text_input("Ürün Adı")
@@ -124,14 +90,11 @@ def dashboard():
             else:
                 st.error("Lütfen geçerli bir ürün adı girin.")
 
-    # ---------------- Filtreli Dataframe ----------------
     df_filtreli = st.session_state.df[st.session_state.df["Kategori"].isin(kategori_sec)]
 
-    # ---------------- Mevcut Stok Tablosu ----------------
     st.subheader("Mevcut Stok Listesi")
     st.dataframe(df_filtreli)
 
-    # Azalan stoklar
     st.subheader("⚠️ Azalan Stoklar (20'nin Altı)")
     azalan = df_filtreli[df_filtreli["Stok"] < 20]
     if not azalan.empty:
@@ -139,14 +102,12 @@ def dashboard():
     else:
         st.write("Tüm ürünlerin stoku yeterli.")
 
-    # ---------------- Stok Grafiği ----------------
     st.subheader("📊 Stok Dağılımı")
     fig = px.bar(df_filtreli, x="Ürün", y="Stok", color="Kategori", 
                 title="Ürün Bazlı Stok Seviyeleri",
                 hover_data=["Ürün", "Stok", "Kategori"])
     st.plotly_chart(fig)
 
-    # ---------------- Tahmini Satış ve Tükenme ----------------
     kritik_gun = 5
     stok_esigi = 10
     tahmini_satis_dict = {}
@@ -162,17 +123,14 @@ def dashboard():
         tahmini_satis_dict[urun] = round(ortalama_satis,1)
         tukenme_suresi_dict[urun] = round(tahmini_gun,1)
 
-    # Tahmini Satış Tablosu
     st.subheader("📈 Tahmini Günlük Satış (adet)")
     df_satis = pd.DataFrame(list(tahmini_satis_dict.items()), columns=["Ürün","Tahmini Günlük Satış"])
     st.table(df_satis)
 
-    # Tükenme Süresi Tablosu
     st.subheader("⏳ Tükenme Süresi (gün)")
     df_tukenme = pd.DataFrame(list(tukenme_suresi_dict.items()), columns=["Ürün","Tükenme Süresi"])
     st.table(df_tukenme)
 
-    # Grafikler
     st.subheader("📊 Grafikler")
     col1, col2 = st.columns(2)
 
@@ -190,19 +148,16 @@ def dashboard():
                             color_discrete_sequence=renkler)
         st.plotly_chart(fig_tukenme)
 
-    # Kritik Stok Uyarısı
     st.subheader("⚠️ Kritik Stok Uyarısı")
     for urun, gun in tukenme_suresi_dict.items():
         if gun < kritik_gun:
             st.warning(f"{urun} {kritik_gun} gün içinde tükenebilir!")
 
-    # Stok Azalma Otomatik Uyarısı
     st.subheader("🛎️ Stok Uyarıları")
     for index, row in df_filtreli.iterrows():
         if row["Stok"] < stok_esigi:
             st.error(f"{row['Ürün']} stok miktarı kritik seviyeye düştü! ({row['Stok']} adet kaldı)")
 
-# ---------------- Ana Kontrol ----------------
 if not st.session_state.login_status:
     login_screen()
 else:
